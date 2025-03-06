@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Control de Mano Robótica</title>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background-color: #1a1a1a;
+      color: #e0e0e0;
+      margin: 0;
+      padding: 20px;
+    }
+    h1, h2, h3 {
+      color: #ffffff;
+    }
+    button {
+      padding: 12px 24px;
+      margin: 5px;
+      font-size: 16px;
+      background-color: #333333;
+      color: #ffffff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    button:hover {
+      background-color: #555555;
+    }
+    .dedo-control, .gestos, .camera-section {
+      margin: 20px 0;
+    }
+    .dedo-control div {
+      margin: 15px 0;
+    }
+    #videoContainer {
+      position: relative;
+      width: 100%;
+      max-width: 640px;
+      margin: 0 auto;
+      display: none;
+    }
+    video, canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: auto;
+      transform: scaleX(-1); /* Espejo para reflejar la mano del usuario */
+    }
+    #startButton {
+      background-color: #4CAF50;
+    }
+    #startButton:hover {
+      background-color: #45a049;
+    }
+    @media (max-width: 768px) {
+      button {
+        width: 100%;
+        margin: 10px 0;
+        font-size: 14px;
+      }
+      .dedo-control div, .gestos {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      #videoContainer {
+        max-width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Control de Mano Robótica</h1>
+  <p>Controla los dedos manualmente o usa la cámara para detectar gestos.</p>
+
+  <div class="dedo-control">
+    <h2>Control Individual</h2>
+    <div>
+      <h3>Pulgar</h3>
+      <button onclick="moverDedo('pulgar', 'abrir')">Abrir</button>
+      <button onclick="moverDedo('pulgar', 'cerrar')">Cerrar</button>
+    </div>
+    <div>
+      <h3>Índice</h3>
+      <button onclick="moverDedo('indice', 'abrir')">Abrir</button>
+      <button onclick="moverDedo('indice', 'cerrar')">Cerrar</button>
+    </div>
+    <div>
+      <h3>Medio</h3>
+      <button onclick="moverDedo('medio', 'abrir')">Abrir</button>
+      <button onclick="moverDedo('medio', 'cerrar')">Cerrar</button>
+    </div>
+    <div>
+      <h3>Anular</h3>
+      <button onclick="moverDedo('anular', 'abrir')">Abrir</button>
+      <button onclick="moverDedo('anular', 'cerrar')">Cerrar</button>
+    </div>
+    <div>
+      <h3>Meñique</h3>
+      <button onclick="moverDedo('menique', 'abrir')">Abrir</button>
+      <button onclick="moverDedo('menique', 'cerrar')">Cerrar</button>
+    </div>
+  </div>
+
+  <div class="gestos">
+    <h2>Gestos Predefinidos</h2>
+    <button onclick="gesto('medio')">Dedo Medio</button>
+    <button onclick="gesto('like')">Like</button>
+    <button onclick="gesto('rock')">Rock and Roll</button>
+  </div>
+
+  <div class="camera-section">
+    <h2>Detección de Manos</h2>
+    <button id="startButton">Iniciar Cámara</button>
+    <div id="videoContainer">
+      <video id="inputVideo" autoplay playsinline></video>
+      <canvas id="outputCanvas"></canvas>
+    </div>
+  </div>
+
+  <script>
+    const ESP32_URL = 'http://tu-dominio.com'; // Cambia esto por la URL real del ESP32 (ejemplo: ngrok)
+
+    const startButton = document.getElementById('startButton');
+    const videoContainer = document.getElementById('videoContainer');
+    const video = document.getElementById('inputVideo');
+    const canvas = document.getElementById('outputCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const hands = new Hands({
+      locateFile: (file) => {
+        return "https://cdn.jsdelivr.net/npm/@mediapipe/hands/" + file;
+      }
+    });
+    hands.setOptions({
+      maxNumHands: 1,
+      modelComplexity: 1,
+      minDetectionConfidence: 0.7,
+      minTrackingConfidence: 0.5
+    });
+    hands.onResults((results) => {
+      ctx.save();
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+      if (results.multiHandLandmarks && results.multiHandLandmarks[0]) {
+        const landmarks = results.multiHandLandmarks[0];
+        const dedos = detectarDedos(landmarks);
+        console.log("Dedos detectados:", dedos);
+        enviarDatos(dedos);
+        dibujarDeteccion(landmarks);
+      }
+      ctx.restore();
+    });
+
+    function detectarDedos(landmarks) {
+      return [
+        (landmarks[4].x < landmarks[3].x) ? 1 : 0,
+        (landmarks[8].y < landmarks[6].y) ? 1 : 0,
+        (landmarks[12].y < landmarks[10].y) ? 1 : 0,
+        (landmarks[16].y < landmarks[14].y) ? 1 : 0,
+        (landmarks[20].y < landmarks[18].y) ? 1 : 0
+      ];
+    }
+
+    function dibujarDeteccion(landmarks) {
+      ctx.beginPath();
+      ctx.strokeStyle = '#4CAF50';
+      ctx.lineWidth = 2;
+      for (let i = 0; i < landmarks.length; i++) {
+        const x = landmarks[i].x * canvas.width;
+        const y = landmarks[i].y * canvas.height;
+        ctx.arc(x, y, 5, 0, 2 * Math.PI);
+        ctx.fillStyle = '#4CAF50';
+        ctx.fill();
+        if (i > 0) {
+          ctx.moveTo(landmarks[i-1].x * canvas.width, landmarks[i-1].y * canvas.height);
+          ctx.lineTo(x, y);
+          ctx.stroke();
+        }
+      }
+    }
+
+    function enviarDatos(dedos) {
+      fetch(`${ESP32_URL}/update`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'fingers=' + dedos.join(',')
+      }).catch(error => console.error("Error enviando datos al ESP32:", error));
+    }
+
+    startButton.addEventListener('click', () => {
+      videoContainer.style.display = 'block';
+      startButton.style.display = 'none';
+      navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
+      }).then(stream => {
+        video.srcObject = stream;
+        video.onloadedmetadata = () => {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          setInterval(() => {
+            hands.send({image: video});
+          }, 100);
+        };
+      }).catch(error => {
+        console.error("Error al acceder a la cámara:", error);
+        alert("No se pudo acceder a la cámara. Verifica los permisos.");
+        videoContainer.style.display = 'none';
+        startButton.style.display = 'block';
+      });
+    });
+
+    function moverDedo(dedo, accion) {
+      fetch(`${ESP32_URL}/update`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: `dedo=${dedo}&accion=${accion}`
+      }).catch(error => console.error("Error enviando comando:", error));
+    }
+
+    function gesto(nombre) {
+      fetch(`${ESP32_URL}/update`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: `gesto=${nombre}`
+      }).catch(error => console.error("Error enviando gesto:", error));
+    }
+  </script>
+</body>
+</html>
