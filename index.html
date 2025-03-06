@@ -31,7 +31,7 @@
     button:hover {
       background-color: #555555;
     }
-    .dedo-control, .gestos, .camera-section {
+    .dedo-control, .camera-section {
       margin: 20px 0;
     }
     .dedo-control div {
@@ -64,7 +64,7 @@
         margin: 10px 0;
         font-size: 14px;
       }
-      .dedo-control div, .gestos {
+      .dedo-control div {
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -108,13 +108,6 @@
     </div>
   </div>
 
-  <div class="gestos">
-    <h2>Gestos Predefinidos</h2>
-    <button onclick="gesto('medio')">Dedo Medio</button>
-    <button onclick="gesto('like')">Like</button>
-    <button onclick="gesto('rock')">Rock and Roll</button>
-  </div>
-
   <div class="camera-section">
     <h2>Detección de Manos</h2>
     <button id="startButton">Iniciar Cámara</button>
@@ -125,7 +118,7 @@
   </div>
 
   <script>
-    const ESP32_URL = 'http://tu-dominio.com'; // Cambia esto por la URL real del ESP32 (ejemplo: ngrok)
+    const ESP32_URL = 'http://tu-dominio.com'; // Reemplaza con la URL de ngrok
 
     const startButton = document.getElementById('startButton');
     const videoContainer = document.getElementById('videoContainer');
@@ -133,6 +126,7 @@
     const canvas = document.getElementById('outputCanvas');
     const ctx = canvas.getContext('2d');
 
+    // Configurar MediaPipe Hands
     const hands = new Hands({
       locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
     });
@@ -142,56 +136,80 @@
       minDetectionConfidence: 0.7,
       minTrackingConfidence: 0.5
     });
-    hands.onResults((results) => {
+    hands.onResults(onResults);
+
+    function onResults(results) {
+      // Limpiar el canvas
       ctx.save();
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
-      if (results.multiHandLandmarks && results.multiHandLandmarks[0]) {
+
+      if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
         const landmarks = results.multiHandLandmarks[0];
-        const dedos = detectarDedos(landmarks);
+        drawHand(landmarks); // Dibujar la mano
+        const dedos = detectarDedos(landmarks); // Detectar estado de los dedos
         console.log("Dedos detectados:", dedos);
-        enviarDatos(dedos);
-        dibujarDeteccion(landmarks);
+        enviarDatos(dedos); // Enviar al ESP32
       }
       ctx.restore();
-    });
+    }
 
+    // Función para dibujar la mano con líneas y puntos
+    function drawHand(landmarks) {
+      const connections = [
+        [0, 1], [1, 2], [2, 3], [3, 4],       // Pulgar
+        [0, 5], [5, 6], [6, 7], [7, 8],       // Índice
+        [0, 9], [9, 10], [10, 11], [11, 12],  // Medio
+        [0, 13], [13, 14], [14, 15], [15, 16],// Anular
+        [0, 17], [17, 18], [18, 19], [19, 20],// Meñique
+        [5, 9], [9, 13], [13, 17]             // Conexiones entre dedos
+      ];
+
+      // Dibujar líneas
+      ctx.strokeStyle = '#00FF00';
+      ctx.lineWidth = 2;
+      for (const [start, end] of connections) {
+        ctx.beginPath();
+        ctx.moveTo(landmarks[start].x * canvas.width, landmarks[start].y * canvas.height);
+        ctx.lineTo(landmarks[end].x * canvas.width, landmarks[end].y * canvas.height);
+        ctx.stroke();
+      }
+
+      // Dibujar puntos
+      ctx.fillStyle = '#FF0000';
+      for (const landmark of landmarks) {
+        const x = landmark.x * canvas.width;
+        const y = landmark.y * canvas.height;
+        ctx.beginPath();
+        ctx.arc(x, y, 5, 0, 2 * Math.PI);
+        ctx.fill();
+      }
+    }
+
+    // Detectar si los dedos están abiertos o cerrados
     function detectarDedos(landmarks) {
       return [
-        (landmarks[4].x < landmarks[3].x) ? 1 : 0, // Pulgar
+        (landmarks[4].x < landmarks[3].x) ? 1 : 0, // Pulgar (abierto si punta está a la izquierda)
         (landmarks[8].y < landmarks[6].y) ? 1 : 0, // Índice
         (landmarks[12].y < landmarks[10].y) ? 1 : 0, // Medio
         (landmarks[16].y < landmarks[14].y) ? 1 : 0, // Anular
-        (landmarks[20].y < landmarks[18].y) ? 1 : 0 // Meñique
+        (landmarks[20].y < landmarks[18].y) ? 1 : 0  // Meñique
       ];
     }
 
-    function dibujarDeteccion(landmarks) {
-      ctx.beginPath();
-      ctx.strokeStyle = '#4CAF50';
-      ctx.lineWidth = 2;
-      for (let i = 0; i < landmarks.length; i++) {
-        const x = landmarks[i].x * canvas.width;
-        const y = landmarks[i].y * canvas.height;
-        ctx.arc(x, y, 5, 0, 2 * Math.PI);
-        ctx.fillStyle = '#4CAF50';
-        ctx.fill();
-        if (i > 0) {
-          ctx.moveTo(landmarks[i-1].x * canvas.width, landmarks[i-1].y * canvas.height);
-          ctx.lineTo(x, y);
-          ctx.stroke();
-        }
-      }
-    }
-
+    // Enviar datos al ESP32
     function enviarDatos(dedos) {
       fetch(`${ESP32_URL}/update`, {
         method: 'POST',
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: 'fingers=' + dedos.join(',')
-      }).catch(error => console.error("Error enviando datos al ESP32:", error));
+      })
+      .then(response => response.text())
+      .then(data => console.log("Respuesta del ESP32:", data))
+      .catch(error => console.error("Error enviando datos al ESP32:", error));
     }
 
+    // Iniciar la cámara
     startButton.addEventListener('click', () => {
       videoContainer.style.display = 'block';
       startButton.style.display = 'none';
@@ -202,9 +220,12 @@
         video.onloadedmetadata = () => {
           canvas.width = video.videoWidth;
           canvas.height = video.videoHeight;
-          setInterval(() => {
-            hands.send({image: video});
-          }, 100);
+          // Procesar frames continuamente
+          async function processFrame() {
+            await hands.send({ image: video });
+            requestAnimationFrame(processFrame);
+          }
+          processFrame();
         };
       }).catch(error => {
         console.error("Error al acceder a la cámara:", error);
@@ -214,20 +235,16 @@
       });
     });
 
+    // Control manual de los dedos
     function moverDedo(dedo, accion) {
       fetch(`${ESP32_URL}/update`, {
         method: 'POST',
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: `dedo=${dedo}&accion=${accion}`
-      }).catch(error => console.error("Error enviando comando:", error));
-    }
-
-    function gesto(nombre) {
-      fetch(`${ESP32_URL}/update`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: `gesto=${nombre}`
-      }).catch(error => console.error("Error enviando gesto:", error));
+      })
+      .then(response => response.text())
+      .then(data => console.log(`Dedo ${dedo} movido a ${accion}:`, data))
+      .catch(error => console.error("Error enviando comando:", error));
     }
   </script>
 </body>
