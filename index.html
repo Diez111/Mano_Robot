@@ -118,7 +118,7 @@
   </div>
 
   <script>
-    const ESP32_URL = 'http://tu-dominio.com'; // Reemplaza con la URL de ngrok
+    const ESP32_URL = 'http://tu-dominio.com'; // Reemplaza con la URL de tu ESP32 o túnel ngrok
 
     const startButton = document.getElementById('startButton');
     const videoContainer = document.getElementById('videoContainer');
@@ -159,13 +159,12 @@
       const connections = [
         [0, 1], [1, 2], [2, 3], [3, 4],       // Pulgar
         [0, 5], [5, 6], [6, 7], [7, 8],       // Índice
-        [0, 9], [9, 10], [10, 11], [11, 12],  // Medio
-        [0, 13], [13, 14], [14, 15], [15, 16],// Anular
-        [0, 17], [17, 18], [18, 19], [19, 20],// Meñique
-        [5, 9], [9, 13], [13, 17]             // Conexiones entre dedos
+        [0, 9], [9, 10], [10, 11], [11, 12],   // Medio
+        [0, 13], [13, 14], [14, 15], [15, 16],  // Anular
+        [0, 17], [17, 18], [18, 19], [19, 20],  // Meñique
+        [5, 9], [9, 13], [13, 17]               // Conexiones entre dedos
       ];
 
-      // Dibujar líneas
       ctx.strokeStyle = '#00FF00';
       ctx.lineWidth = 2;
       for (const [start, end] of connections) {
@@ -174,78 +173,69 @@
         ctx.lineTo(landmarks[end].x * canvas.width, landmarks[end].y * canvas.height);
         ctx.stroke();
       }
-
-      // Dibujar puntos
-      ctx.fillStyle = '#FF0000';
-      for (const landmark of landmarks) {
-        const x = landmark.x * canvas.width;
-        const y = landmark.y * canvas.height;
-        ctx.beginPath();
-        ctx.arc(x, y, 5, 0, 2 * Math.PI);
-        ctx.fill();
-      }
     }
 
-    // Detectar si los dedos están abiertos o cerrados
+    // Función de ejemplo para detectar dedos (debes implementar la lógica según tus necesidades)
     function detectarDedos(landmarks) {
-      return [
-        (landmarks[4].x < landmarks[3].x) ? 1 : 0, // Pulgar (abierto si punta está a la izquierda)
-        (landmarks[8].y < landmarks[6].y) ? 1 : 0, // Índice
-        (landmarks[12].y < landmarks[10].y) ? 1 : 0, // Medio
-        (landmarks[16].y < landmarks[14].y) ? 1 : 0, // Anular
-        (landmarks[20].y < landmarks[18].y) ? 1 : 0  // Meñique
-      ];
+      // Retorna un arreglo con 1 = abierto y 0 = cerrado para cada dedo
+      // [pulgar, indice, medio, anular, menique]
+      return [1, 1, 1, 1, 1];
     }
 
-    // Enviar datos al ESP32
+    // Función para enviar los datos al ESP32
     function enviarDatos(dedos) {
-      fetch(`${ESP32_URL}/update`, {
+      const url = ESP32_URL + '/update';
+      const params = new URLSearchParams();
+      params.append('fingers', dedos.join(','));
+      fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: 'fingers=' + dedos.join(',')
+        body: params
       })
       .then(response => response.text())
       .then(data => console.log("Respuesta del ESP32:", data))
-      .catch(error => console.error("Error enviando datos al ESP32:", error));
+      .catch(error => console.error('Error:', error));
     }
 
-    // Iniciar la cámara
-    startButton.addEventListener('click', () => {
-      videoContainer.style.display = 'block';
-      startButton.style.display = 'none';
-      navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
-      }).then(stream => {
-        video.srcObject = stream;
-        video.onloadedmetadata = () => {
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
-          // Procesar frames continuamente
-          async function processFrame() {
-            await hands.send({ image: video });
-            requestAnimationFrame(processFrame);
-          }
-          processFrame();
-        };
-      }).catch(error => {
-        console.error("Error al acceder a la cámara:", error);
-        alert("No se pudo acceder a la cámara. Verifica los permisos.");
-        videoContainer.style.display = 'none';
-        startButton.style.display = 'block';
-      });
-    });
-
-    // Control manual de los dedos
+    // Función para control manual de los dedos
     function moverDedo(dedo, accion) {
-      fetch(`${ESP32_URL}/update`, {
+      const url = ESP32_URL + '/update';
+      const params = new URLSearchParams();
+      params.append('dedo', dedo);
+      params.append('accion', accion);
+      fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: `dedo=${dedo}&accion=${accion}`
+        body: params
       })
       .then(response => response.text())
-      .then(data => console.log(`Dedo ${dedo} movido a ${accion}:`, data))
-      .catch(error => console.error("Error enviando comando:", error));
+      .then(data => console.log("Respuesta del ESP32:", data))
+      .catch(error => console.error('Error:', error));
     }
+
+    // Manejo de la cámara
+    startButton.addEventListener('click', () => {
+      videoContainer.style.display = 'block';
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => {
+          video.srcObject = stream;
+          video.play();
+        })
+        .catch(err => console.error("Error al acceder a la cámara:", err));
+    });
+
+    // Redimensionar canvas según el video
+    video.addEventListener('loadedmetadata', () => {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+    });
+
+    // Procesar el video con MediaPipe Hands
+    async function processVideo() {
+      await hands.send({ image: video });
+      requestAnimationFrame(processVideo);
+    }
+    video.addEventListener('play', () => {
+      processVideo();
+    });
   </script>
 </body>
 </html>
