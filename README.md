@@ -1,18 +1,12 @@
-A continuación se muestra un ejemplo de README.md para tu proyecto "Mano_Robot":
-
----
-
 # Mano_Robot
 
 Proyecto de mano robótica controlada por ESP32 que integra servomotores y una interfaz web para el control manual y mediante detección de gestos.
 
 ## Inspiración y Modificaciones
 
-El diseño del modelo 3D se inspiró en el modelo original [Hollies Hand v5](https://cults3d.com/es/modelo-3d/artilugios/hollies-hand-v5) disponible en Cults3D. Se realizó una modificación en el modelo para permitir la integración de servomotores, facilitando su conexión y control con la placa ESP32.
+El credito del modelo original para los modelos stl que modifique es de: [Hollies Hand v5](https://cults3d.com/es/modelo-3d/artilugios/hollies-hand-v5) disponible en Cults3D.
 
 ## Lista de Materiales
-
-Basado en la documentación y lista de materiales utilizada:
 
 - **Arsumo Nodemcu Esp32 Wifi + Bluetooth 5v Wroom**  
   Microcontrolador (cerebro del proyecto)
