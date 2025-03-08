@@ -6,7 +6,7 @@ Proyecto de mano robótica controlada por ESP32 que integra servomotores y una i
 
 El credito del modelo original para los modelos stl que modifique es de: [Hollies Hand v5](https://cults3d.com/es/modelo-3d/artilugios/hollies-hand-v5) disponible en Cults3D.
 
-##Imagenes:
+## Imagenes:
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/d705841f-3815-4530-8865-b5ce89e2c14d" alt="Imagen 1" width="300" style="margin-right:20px;">
