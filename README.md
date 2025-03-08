@@ -57,7 +57,7 @@ Sigue estos pasos para poner en marcha el proyecto:
 1. **Clonar el repositorio:**
 
    ```bash
-   git clone https://github.com/Diez111/Mano_Robot.git
+   [git clone https://github.com/Diez111/Mano_Robot.git](https://github.com/Diez111/Mano_Robot.git)
    ```
 
 2. **Abrir el proyecto en el IDE de Arduino:**
