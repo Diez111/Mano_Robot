@@ -6,6 +6,10 @@ Proyecto de mano robótica controlada por ESP32 que integra servomotores y una i
 
 El credito del modelo original para los modelos stl que modifique es de: [Hollies Hand v5](https://cults3d.com/es/modelo-3d/artilugios/hollies-hand-v5) disponible en Cults3D.
 
+##Imagenes:
+![image](https://github.com/user-attachments/assets/d705841f-3815-4530-8865-b5ce89e2c14d)
+![image](https://github.com/user-attachments/assets/059bc291-7ca6-446f-8c29-0effd70c1082)
+
 ## Lista de Materiales
 
 - **Arsumo Nodemcu Esp32 Wifi + Bluetooth 5v Wroom**  
