@@ -102,10 +102,6 @@ El código organiza la funcionalidad en secciones:
 - **Servidor web e interfaz:** Implementa una interfaz visual para el control a través del navegador.
 - **Integración con detección de gestos:** Recibe datos de la cámara para interpretar y enviar comandos de movimiento.
 
-## Contribuciones
-
-Se agradecen las contribuciones para mejorar el proyecto. Si deseas colaborar o tienes sugerencias, por favor abre un *issue* o realiza un *pull request* en el repositorio.
-
 ## Enlaces Útiles
 
 - **Repositorio del proyecto:** [https://github.com/Diez111/Mano_Robot.git](https://github.com/Diez111/Mano_Robot.git)
